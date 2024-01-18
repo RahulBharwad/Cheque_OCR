@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing Result</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='output.css') }}">
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-4 sm:p-8 rounded-lg shadow-md w-full max-w-2xl">
+        <h1 class="text-2xl sm:text-4xl font-extrabold mb-4 sm:mb-6 text-indigo-700">Image Processing Result</h1>
+        <img src="{{ img_data }}" alt="Processed Image" class="w-full mb-4 sm:mb-6 rounded-lg shadow-lg">
+        <p class="text-base sm:text-lg text-gray-700 mb-4 sm:mb-6">Detected Logo: <span
+                class="font-semibold text-indigo-700">{{ output_text }}</span> Bank</p>
+        <!-- Form to handle the restart button -->
+        <form method="GET" action="/">
+            <button type="submit"
+                class="bg-indigo-700 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-full hover:bg-indigo-600 transition duration-300 float-left">Restart</button>
+        </form>
+
+        <!-- New button for "Get Details" -->
+        <button type="button"
+            class="bg-indigo-700 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-full hover:bg-indigo-600 transition duration-300 float-right"
+            onclick="getDetails()">Get Details</button>
+
+        <!-- Placeholder for extracted name -->
+        <p id="extractedName" class="text-base sm:text-lg text-gray-700 mb-4 sm:mb-6"></p>
+    </div>
+
+    <!-- Script for the "Get Details" button -->
+    <script>
+        function getDetails() {
+            // Make an AJAX request to the /get_details endpoint
+            fetch('/get_details')
+                .then(response => response.json())
+                .then(data => {
+                    const extractedNameElement = document.getElementById('extractedName');
+
+                    if ('extracted_name' in data) {
+                        // Update the content of the <p> tag with the extracted name
+                        extractedNameElement.textContent = 'Name: ' + data.extracted_name;
+                    } else {
+                        // Display an error message if the extracted name is not available
+                        extractedNameElement.textContent = 'Error: Image path not set';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Display an error message if there is an issue with the AJAX request
+                    extractedNameElement.textContent = 'Error occurred while fetching details';
+                });
+        }
+    </script>
+</body>
+
+</html>

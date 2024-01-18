@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='output.css') }}">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
+        <h1 class="text-4xl font-extrabold mb-6 text-indigo-700">Image Processing App</h1>
+        <form action="{{ url_for('index') }}" method="post" enctype="multipart/form-data">
+            <div class="mb-4">
+                <label for="image" class="block text-sm font-medium text-gray-700">Select Image:</label>
+                <input type="file" name="image" id="image" accept=".jpg, .jpeg, .png, .tiff" class="mt-1 p-2 border rounded-md w-full">
+            </div>
+            <div class="mb-4">
+                <label for="image_url" class="block text-sm font-medium text-gray-700">or Enter Image URL:</label>
+                <input type="text" name="image_url" id="image_url" class="mt-1 p-2 border rounded-md w-full">
+                
+            </div>
+            <button type="submit" class="w-full bg-indigo-500 text-white py-2 rounded-md hover:bg-indigo-600 transition duration-300">Process Image</button>
+        </form>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="mt-4">
+                    {% for message in messages %}
+                        <li class="text-green-500">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+    </div>
+</body>
+</html>
