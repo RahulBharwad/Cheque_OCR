@@ -12,7 +12,6 @@ from datetime import timedelta
 from flask_session import Session
 
 
-
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secret key for flash messages
 
@@ -157,7 +156,7 @@ class ImageProcessingApp:
         
 # Move this instantiation outside the route functions
 app.config['SESSION_TYPE'] = 'filesystem'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)  # Adjust as needed
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)  # Adjust as needed
 Session(app)
 
 @app.route('/get_details', methods=['GET'])
