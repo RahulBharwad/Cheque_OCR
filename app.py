@@ -16,6 +16,12 @@ from flask_session import Session
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secret key for flash messages
 
+# Set Tesseract executable path dynamically
+import os
+app_root = os.path.dirname(os.path.abspath(__file__))
+tesseract_path = os.path.join(app_root, "tesseract.exe")
+pytesseract.pytesseract.tesseract_cmd = tesseract_path
+
 class ImageProcessingApp:
     def __init__(self):
         self.image_path = None
@@ -106,7 +112,7 @@ class ImageProcessingApp:
 
     def crop_and_extract_name(self):
         try:
-            pytesseract.pytesseract.tesseract_cmd = "./tesseract.exe"
+            #pytesseract.pytesseract.tesseract_cmd = "./tesseract.exe"
             # Cropping coordinates for Name (x1, y1, x2, y2)
             name_coordinates = (560, 180, 770, 220)
             cropped_image_name = Image.open(self.image_path).crop(name_coordinates)
