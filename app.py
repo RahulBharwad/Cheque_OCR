@@ -15,11 +15,6 @@ from flask_session import Session
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secret key for flash messages
 
-# Set Tesseract executable path dynamically
-import os
-app_root = os.path.dirname(os.path.abspath(__file__))
-tesseract_path = os.path.join(app_root, "tesseract.exe")
-pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
 class ImageProcessingApp:
     def __init__(self):
