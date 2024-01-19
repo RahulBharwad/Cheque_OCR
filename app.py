@@ -106,7 +106,7 @@ class ImageProcessingApp:
 
     def crop_and_extract_name(self):
         try:
-            pytesseract.pytesseract.tesseract_cmd = r"./tesseract.exe"
+            pytesseract.pytesseract.tesseract_cmd = "./tesseract.exe"
             # Cropping coordinates for Name (x1, y1, x2, y2)
             name_coordinates = (560, 180, 770, 220)
             cropped_image_name = Image.open(self.image_path).crop(name_coordinates)
