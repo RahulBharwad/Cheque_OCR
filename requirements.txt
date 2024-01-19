@@ -6,3 +6,4 @@ gunicorn
 requests
 pytesseract
 Flask-Session
+tesseract
