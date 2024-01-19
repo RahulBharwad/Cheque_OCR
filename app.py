@@ -8,6 +8,9 @@ from io import BytesIO
 from base64 import b64encode
 import requests
 import pytesseract
+from datetime import timedelta
+from flask_session import Session
+
 
 
 app = Flask(__name__)
@@ -54,7 +57,7 @@ class ImageProcessingApp:
         target_image = cv2.convertScaleAbs(target_image)
 
         # Load all template images in the specified folder
-        templates_folder = r"Logos"
+        templates_folder = r"C:\Users\admin\Desktop\Sample_model\logo detection\Logos"
         template_files = [f for f in os.listdir(templates_folder) if f.endswith((".jpg", ".jpeg", ".png", ".tiff"))]
 
         # Set the threshold for template matching
@@ -103,7 +106,7 @@ class ImageProcessingApp:
 
     def crop_and_extract_name(self):
         try:
-            pytesseract.pytesseract.tesseract_cmd = r'tesseract.exe'
+            pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
             # Cropping coordinates for Name (x1, y1, x2, y2)
             name_coordinates = (560, 180, 770, 220)
             cropped_image_name = Image.open(self.image_path).crop(name_coordinates)
@@ -119,7 +122,7 @@ class ImageProcessingApp:
                 return None
 
             # Replace specific characters with spaces
-            characters_to_replace = ["For", "for"]
+            characters_to_replace = ["For", "for", "FOR"]
             for char in characters_to_replace:
                 extracted_name = extracted_name.replace(char, " ")
 
@@ -144,10 +147,17 @@ class ImageProcessingApp:
         self.image_path = image_path
 
 # Move this instantiation outside the route functions
-processing_app = ImageProcessingApp()
+#processing_app = ImageProcessingApp()
         
+# Move this instantiation outside the route functions
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)  # Adjust as needed
+Session(app)
+
 @app.route('/get_details', methods=['GET'])
 def get_details():
+    processing_app = session.get('processing_app', ImageProcessingApp())
+
     if processing_app.image_path:
         # Call the function to crop and extract name from the image
         extracted_name = processing_app.crop_and_extract_name()
@@ -160,8 +170,9 @@ def get_details():
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    processing_app = session.get('processing_app', ImageProcessingApp())
+
     if request.method == 'POST':
-        #processing_app = ImageProcessingApp()  # Remove this line
         uploaded_image = request.files.get('image')
         image_url = request.form.get('image_url', '').strip()
 
@@ -199,15 +210,16 @@ def index():
                 _, buffer = cv2.imencode('.jpg', processed_image)
                 img_str = b64encode(buffer).decode('utf-8')
                 img_data = f'data:image/jpeg;base64,{img_str}'
+                session['processing_app'] = processing_app
                 return render_template('result.html', img_data=img_data, output_text=output_text)
 
             print("Processing failed. Image path:", processing_app.image_path)
 
     elif request.method == 'GET':
-        # processing_app = ImageProcessingApp()  # This line should be removed
         processing_app.image_path = None
         flash("Restarted. Please select an image or provide a URL.", 'info')
 
+    session['processing_app'] = processing_app
     return render_template('index.html')
 
 if __name__ == '__main__':
