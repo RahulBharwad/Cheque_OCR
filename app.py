@@ -10,8 +10,7 @@ import requests
 import pytesseract
 from datetime import timedelta
 from flask_session import Session
-
-
+import json
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secret key for flash messages
@@ -19,14 +18,12 @@ app.secret_key = 'your_secret_key'  # Replace with a secret key for flash messag
 class ImageProcessingApp:
     def __init__(self):
         self.image_path = None
-        self.threshold = 0.8
+        self.threshold = 0.75
 
     def process_image(self):
         if not self.image_path:
             flash("Please select an image or provide a URL.", 'error')
             return None, None
-
-        print("Processing image path:", self.image_path)  # Add this line for debugging
 
         # Load the source image
         source_path = r"P_80204011000000927.tiff"
@@ -48,8 +45,6 @@ class ImageProcessingApp:
             flash(f"Error loading the image: {e}", 'error')
             return None, None
 
-        print("Loaded target image")  # Add this line for debugging
-
         # Resize the target image to match the dimensions of the source image
         target_image = cv2.resize(target_image, (source_image.shape[1], source_image.shape[0]))
 
@@ -57,7 +52,7 @@ class ImageProcessingApp:
         target_image = cv2.convertScaleAbs(target_image)
 
         # Load all template images in the specified folder
-        templates_folder = r"Logos"
+        templates_folder = r"C:\Users\admin\Desktop\Sample_model\logo detection\Logos"
         template_files = [f for f in os.listdir(templates_folder) if f.endswith((".jpg", ".jpeg", ".png", ".tiff"))]
 
         # Set the threshold for template matching
@@ -66,6 +61,11 @@ class ImageProcessingApp:
         # Variable to check if any template is detected
         template_detected = False
 
+        # Initialize variables to store the best match result and corresponding template name
+        best_match_result = -1
+        best_template_name = None
+        best_locations = None  # Variable to store locations for the template with the highest match result
+
         # Process each template
         for template_file in template_files:
             template_path = os.path.join(templates_folder, template_file)
@@ -73,8 +73,6 @@ class ImageProcessingApp:
 
             # Load the template
             template = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
-
-            # Ensure both template and target image have the same depth and type
             template = cv2.convertScaleAbs(template)
 
             # Apply template matching
@@ -82,72 +80,109 @@ class ImageProcessingApp:
             locations = np.where(result >= threshold)
             locations = list(zip(*locations[::-1]))
 
-            # If any match is found, set template_detected to True and break the loop
+            # If any match is found
             if locations:
                 template_detected = True
-                break
-        
+
+                # Get the best match result and corresponding template name
+                best_result_for_template = np.max(result)
+                if best_result_for_template > best_match_result:
+                    best_match_result = best_result_for_template
+                    best_template_name = template_name
+                    best_locations = locations
+
         # If no template is detected, display a message without showing the image
         if not template_detected:
             flash("Previous report:-Logo not detected", 'info')
             return target_image, None
 
-        # Draw rectangles around the detected areas
-        for loc in locations:
+        # Draw rectangles around the detected areas for the template with the best match result
+        for loc in best_locations:
             x, y = loc
-            h, w = template.shape[:2]
+            h, w = template.shape[:2]  # Use template.shape to get dimensions
             cv2.rectangle(target_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-        print("Template detected:", template_name)  # Add this line for debugging
+        print("Template detected:", best_template_name)
 
-        return target_image, template_name
+        return target_image, best_template_name
     
+
+    def read_coordinates_from_json(self, best_template_name):
+        json_file_path = "crop_coordinates.json"  
+        try:
+            with open(json_file_path, 'r') as json_file:
+                data = json.load(json_file)
+                for item in data.get("data", []):
+                    if item["template_name"] == best_template_name:
+                        return item["coordinates"]
+        except Exception as e:
+            print(f"Error reading JSON file: {str(e)}")
+        return None
 
 
     def crop_and_extract_name(self):
         try:
-            pytesseract.pytesseract.tesseract_cmd = r"tesseract.exe"
-            # Cropping coordinates for Name (x1, y1, x2, y2)
-            name_coordinates = (560, 180, 770, 220)
-            cropped_image_name = Image.open(self.image_path).crop(name_coordinates)
-            #plt.imshow(cropped_image_name)
-            #plt.title("Cropped Name Image")
-            #plt.show()
+            pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-            # Extract text using pytesseract
-            extracted_name = pytesseract.image_to_string(cropped_image_name, lang='eng')
+            # Call the process_image method
+            target_image, best_template_name = self.process_image()
+
+            # Check if template_name is None
+            if best_template_name is None:
+                print("Template not detected. Cannot proceed with cropping and extraction.")
+                return "Not working for this bank"
+
+            # Retrieve coordinates for the detected template_name from the JSON file
+            coordinates_from_json = self.read_coordinates_from_json(best_template_name)
+
+            # Check if coordinates_from_json is None
+            if coordinates_from_json is None:
+                print("Coordinates not found in JSON for the detected template_name.")
+                return "Not working for this bank"
+
+            # Initialize the extracted name
+            extracted_name = ""
+
+            # Iterate over each set of coordinates
+            for name_coordinates in coordinates_from_json:
+                # Convert coordinates_from_json to tuple
+                name_coordinates = tuple(map(int, name_coordinates))
+
+                # Cropping coordinates for Name (x1, y1, x2, y2)
+                cropped_image_name = Image.open(self.image_path).crop(name_coordinates)
+
+                # Extract text using pytesseract
+                extracted_name = pytesseract.image_to_string(cropped_image_name, lang='eng')
+
+                # Further processing to clean extracted name
+                if extracted_name:
+                    characters_to_replace = ["For", "for", "FOR"]
+                    for char in characters_to_replace:
+                        extracted_name = extracted_name.replace(char, " ")
+
+                    extracted_name = extracted_name.replace("&", "And")
+                    extracted_name = re.sub(r'\b[a-z]+\b', ' ', extracted_name)
+                    extracted_name = re.sub(r'[^a-zA-Z ]', ' ', extracted_name)
+                    
+                    # Check if extracted name is not empty after cleaning
+                    if extracted_name.strip():
+                        break  # If text is found, break the loop
 
             if not extracted_name:
-                print(f"Warning: Extracted name is empty.")
-                return None
+                print("Warning: No Name found.")
+                return "No Name found"
 
-            # Replace specific characters with spaces
-            characters_to_replace = ["For", "for", "FOR"]
-            for char in characters_to_replace:
-                extracted_name = extracted_name.replace(char, " ")
-
-            extracted_name = extracted_name.replace("&", "And")
-
-            # Replace non-alphabetic characters with spaces using regex
-            extracted_name = re.sub(r'[^a-zA-Z ]', ' ', extracted_name)
-
-            # Split the text by "     " (five spaces) and print only the first part
-            name_parts = extracted_name.split("    ")
-            if name_parts:
-                first_part = name_parts[0].strip()
-                print(f"Extracted Name: {first_part}")
-                return first_part
-
+            print(f"Extracted Name: {extracted_name.strip()}")
+            return extracted_name.strip()
 
         except Exception as e:
             print(f"Error processing {self.image_path} for Name: {str(e)}")
-            return None, None
-        
+            return "Not working for this bank"
+
     def set_image_path(self, image_path):
         self.image_path = image_path
 
-# Move this instantiation outside the route functions
-#processing_app = ImageProcessingApp()
+
         
 # Move this instantiation outside the route functions
 app.config['SESSION_TYPE'] = 'filesystem'
