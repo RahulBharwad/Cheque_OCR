@@ -45,6 +45,10 @@
             "coordinates": [[500, 250, 800, 285], [500, 260, 790, 285]]
         },
         {
+            "template_name": "State Bank of India",
+            "coordinates": [[500, 250, 800, 285], [500, 260, 790, 285]]
+        },
+        {
             "template_name": "Axis",
             "coordinates": [[540, 180, 775, 215]]
         },
